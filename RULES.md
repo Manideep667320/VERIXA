@@ -1,0 +1,6 @@
+- Read implementation_critique_and_plan.md for the roadmap.
+- Only touch files listed in the task. Never modify completed phases except to fix a failing test.
+- Use typed Pydantic models; no placeholder/mock logic unless stated.
+- After coding: run tests, fix failures, then reply with ONLY: files changed + test results (no code dumps, no explanations).
+- Prefer stdlib/open-source; no paid services. Every external integration sits behind an interface with a mock implementation used in tests.
+- Never break Phase 1-6 tests. Run the full suite before finishing.

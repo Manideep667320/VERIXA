@@ -44,8 +44,12 @@ class LLMProvider(ABC):
 
 class GeminiProvider(LLMProvider):
     def __init__(self) -> None:
+        api_key = settings.gemini_api_key.strip()
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY is required when LLM_PROVIDER=gemini.")
         from google import genai
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+
+        self._client = genai.Client(api_key=api_key)
         self._model = settings.gemini_model
 
     async def generate(self, prompt: str, system: str = "") -> str:
