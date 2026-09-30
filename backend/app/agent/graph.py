@@ -40,7 +40,8 @@ async def intent_node(state: AgentState, llm: LLMProvider) -> AgentState:
     assert isinstance(output, IntentOutput)
     return state.model_copy(update={"intent": output.request_type,
                                     "entities": {**output.entities, "desired_outcome": output.desired_outcome,
-                                                 "urgency": output.urgency}})
+                                                 "urgency": output.urgency},
+                                    "stage_statuses": _complete_stage(state, "understanding_request")})
 
 async def retrieval_node(state: AgentState, retriever: Retriever) -> tuple[AgentState, RetrievalNodeOutput]:
     raw = retriever(state.request)
@@ -52,7 +53,8 @@ async def retrieval_node(state: AgentState, retriever: Retriever) -> tuple[Agent
             run_id=state.run_id, query=state.request, confidence=best_score,
             evidence_ids=[item.id for item in output.evidence],
         )
-    return state.model_copy(update={"evidence": output.evidence}), output
+    return state.model_copy(update={"evidence": output.evidence,
+                                    "stage_statuses": _complete_stage(state, "retrieving_evidence")}), output
 
 async def reasoning_node(state: AgentState, llm: LLMProvider) -> tuple[AgentState, ReasoningOutput]:
     evidence_payload = [{"id": e.id, "source": e.source, "section": e.section, "text": e.text}
@@ -65,7 +67,8 @@ async def reasoning_node(state: AgentState, llm: LLMProvider) -> tuple[AgentStat
         raise ValueError(f"LLM cited evidence IDs not retrieved: {', '.join(sorted(invalid))}")
     return state.model_copy(update={"reasoning_summary": output.summary,
                                     "evidence_confidence": output.confidence,
-                                    "severity": Severity(output.severity.upper())}), output
+                                    "severity": Severity(output.severity.upper()),
+                                    "stage_statuses": _complete_stage(state, "reasoning")}), output
 
 async def action_plan_node(state: AgentState, llm: LLMProvider,
                            reasoning: ReasoningOutput) -> tuple[AgentState, ActionPlanOutput]:
@@ -78,7 +81,8 @@ async def action_plan_node(state: AgentState, llm: LLMProvider,
     invalid = {evidence_id for action in actions for evidence_id in action.evidence_ids} - valid_ids
     if invalid:
         raise ValueError(f"LLM cited evidence IDs not retrieved: {', '.join(sorted(invalid))}")
-    return state.model_copy(update={"proposed_actions": actions}), output
+    return state.model_copy(update={"proposed_actions": actions,
+                                    "stage_statuses": _complete_stage(state, "preparing_action_plan")}), output
 
 async def policy_check_node(state: AgentState) -> tuple[AgentState, PolicyCheckNodeOutput]:
     results = [evaluate_policy(action) for action in state.proposed_actions]
@@ -115,7 +119,8 @@ async def decision_node(state: AgentState, policy_output: PolicyCheckNodeOutput,
     output = DecisionNodeOutput(decision=decision, reason=reason)
     return state.model_copy(update={"autonomy_decision": output.decision,
                                     "approval_required": output.decision == AutonomyDecision.APPROVAL_REQUIRED,
-                                    "status": output.decision.value}), output
+                                    "status": output.decision.value,
+                                    "stage_statuses": _complete_stage(state, "evaluating_policy")}), output
 
 async def run_agent(request: str, *, llm: LLMProvider | None = None,
                     retriever: Retriever | None = None) -> AgentState:
@@ -123,21 +128,33 @@ async def run_agent(request: str, *, llm: LLMProvider | None = None,
     state = AgentState(request=request)
     evidence_retriever = retriever or retrieve
     state, _ = await request_node(state)
+    active_stage = "understanding_request"
     try:
         provider = llm or get_llm()
         state = await intent_node(state, provider)
+        active_stage = "retrieving_evidence"
         state, _ = await retrieval_node(state, evidence_retriever)
+        active_stage = "reasoning"
         state, reasoning = await reasoning_node(state, provider)
+        active_stage = "preparing_action_plan"
         state, _ = await action_plan_node(state, provider, reasoning)
+        active_stage = "evaluating_policy"
         state, policy_output = await policy_check_node(state)
         state, _ = await decision_node(state, policy_output, reasoning)
     except Exception as exc:
+        stage_statuses = dict(state.stage_statuses)
+        stage_statuses[active_stage] = "failed"
         state = state.model_copy(update={"autonomy_decision": AutonomyDecision.ESCALATE,
                                          "status": AutonomyDecision.ESCALATE.value,
                                          "error": str(exc),
-                                         "policy_result": state.policy_result or PolicyResult(
-                                             allowed=False, reason="Agent validation or policy evaluation failed.")})
+                                         "failed_stage": active_stage,
+                                         "stage_statuses": stage_statuses})
     return state
+
+def _complete_stage(state: AgentState, stage: str) -> dict[str, str]:
+    statuses = dict(state.stage_statuses)
+    statuses[stage] = "complete"
+    return statuses
 
 def _amount(action: ActionContract) -> float:
     return _coerce_amount(action.arguments.get("amount", action.arguments.get("cost", 0)))

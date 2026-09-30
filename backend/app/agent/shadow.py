@@ -114,12 +114,28 @@ async def run_workflow(
 ) -> AgentState:
     """Run the complete agent graph, persist its recommendation, and gate execution by mode."""
     state = await run_agent(request, llm=llm, retriever=retriever)
+    stage_statuses = dict(state.stage_statuses)
     # Shadow mode intentionally stops here: it never imports or calls a tool handler.
     if mode == RunMode.AUTONOMOUS and state.autonomy_decision == AutonomyDecision.EXECUTE:
         from app.tools.registry import execute_action
         import app.tools  # noqa: F401 — registers tool handlers
         results = [await execute_action(action) for action in state.proposed_actions]
-        state = state.model_copy(update={"execution_results": results})
+        execution_failed = any(not result.success for result in results)
+        stage_statuses["executing_actions"] = "failed" if execution_failed else "complete"
+        stage_statuses["verifying_outcome"] = "skipped"
+        state = state.model_copy(update={
+            "execution_results": results,
+            "workflow_mode": mode.value,
+            "stage_statuses": stage_statuses,
+            "failed_stage": "executing_actions" if execution_failed else state.failed_stage,
+        })
+    else:
+        stage_statuses["executing_actions"] = "skipped"
+        stage_statuses["verifying_outcome"] = "skipped"
+        state = state.model_copy(update={
+            "workflow_mode": mode.value,
+            "stage_statuses": stage_statuses,
+        })
     persist_shadow_run(state, mode, human_decision=human_decision, human_action=human_action)
     return state
 

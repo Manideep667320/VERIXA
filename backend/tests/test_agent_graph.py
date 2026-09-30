@@ -37,6 +37,11 @@ async def test_scenario_a_executes_supported_low_risk_actions():
           "evidence_ids": ["SOP-042"]}],
     )
     assert state.autonomy_decision == AutonomyDecision.EXECUTE
+    assert state.stage_statuses["understanding_request"] == "complete"
+    assert state.stage_statuses["retrieving_evidence"] == "complete"
+    assert state.stage_statuses["reasoning"] == "complete"
+    assert state.stage_statuses["preparing_action_plan"] == "complete"
+    assert state.stage_statuses["evaluating_policy"] == "complete"
 
 
 async def test_scenario_b_requires_approval_for_replacement_over_5000():
@@ -60,6 +65,8 @@ async def test_scenario_c_escalates_when_evidence_is_missing_or_conflicting():
           "evidence_ids": []}],
     )
     assert state.autonomy_decision == AutonomyDecision.ESCALATE
+    assert state.stage_statuses["preparing_action_plan"] == "complete"
+    assert state.stage_statuses["evaluating_policy"] == "complete"
 
 
 async def test_llm_cannot_cite_evidence_not_returned_by_retrieval():
@@ -71,3 +78,24 @@ async def test_llm_cannot_cite_evidence_not_returned_by_retrieval():
     )
     assert state.autonomy_decision == AutonomyDecision.ESCALATE
     assert "not retrieved" in state.error
+    assert state.stage_statuses["reasoning"] == "failed"
+    assert state.stage_statuses["preparing_action_plan"] == "queued"
+
+
+async def test_provider_failure_marks_only_the_stage_that_failed():
+    class BrokenLLM(MockLLM):
+        async def structured_output(self, prompt, schema, system=""):
+            raise RuntimeError("provider unavailable")
+
+    state = await run_agent(
+        "Investigate overheating",
+        llm=BrokenLLM([], {}, {}),
+        retriever=lambda _: [],
+    )
+
+    assert state.failed_stage == "understanding_request"
+    assert state.stage_statuses["understanding_request"] == "failed"
+    assert state.stage_statuses["retrieving_evidence"] == "queued"
+    assert state.stage_statuses["executing_actions"] == "queued"
+    assert state.policy_result is None
+    assert state.error == "provider unavailable"

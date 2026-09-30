@@ -43,6 +43,9 @@ async def test_shadow_mode_blocks_ticket_and_technician_writes(tmp_path, monkeyp
     )
 
     assert state.autonomy_decision == AutonomyDecision.EXECUTE
+    assert state.workflow_mode == "shadow"
+    assert state.stage_statuses["executing_actions"] == "skipped"
+    assert state.stage_statuses["verifying_outcome"] == "skipped"
     with database.get_db() as conn:
         assert conn.execute("SELECT COUNT(*) FROM service_tickets").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM technician_assignments").fetchone()[0] == 0

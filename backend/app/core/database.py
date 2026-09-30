@@ -6,7 +6,15 @@ from pathlib import Path
 
 from app.core.config import settings
 
-DB_PATH = Path(settings.database_url.replace("sqlite:///", ""))
+def resolve_database_path(database_url: str) -> Path:
+    """Resolve relative SQLite URLs against the backend directory, not process CWD."""
+    path = Path(database_url.removeprefix("sqlite:///")).expanduser()
+    if not path.is_absolute():
+        path = Path(__file__).resolve().parents[2] / path
+    return path.resolve()
+
+
+DB_PATH = resolve_database_path(settings.database_url)
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (

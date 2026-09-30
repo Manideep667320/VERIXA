@@ -6,6 +6,8 @@ from typing import Literal
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -73,7 +75,11 @@ class Settings(BaseSettings):
     def data_dir(self) -> Path:
         return self.project_root / "data"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
+    model_config = {
+        "env_file": _PROJECT_ROOT / ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",
+    }
 
 
 settings = Settings()

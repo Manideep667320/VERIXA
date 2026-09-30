@@ -1,7 +1,7 @@
 import { CheckCircle2, Loader2, Circle, AlertTriangle, PauseCircle } from 'lucide-react'
 import StatusBadge from '@/components/StatusBadge'
 
-export type StepStatus = 'complete' | 'in_progress' | 'queued' | 'waiting' | 'escalated'
+export type StepStatus = 'complete' | 'in_progress' | 'queued' | 'waiting' | 'escalated' | 'failed' | 'skipped'
 
 export interface AgentStep {
   title: string
@@ -15,6 +15,8 @@ const STATUS_LABEL: Record<StepStatus, string> = {
   queued: 'Queued',
   waiting: 'Awaiting Approval',
   escalated: 'Escalated',
+  failed: 'Failed',
+  skipped: 'Not run',
 }
 
 function StepIcon({ status }: { status: StepStatus }) {
@@ -28,6 +30,9 @@ function StepIcon({ status }: { status: StepStatus }) {
     return <PauseCircle size={16} strokeWidth={1.75} className="text-[#f2b84b]" />
   }
   if (status === 'escalated') {
+    return <AlertTriangle size={16} strokeWidth={1.75} className="text-[#f2635a]" />
+  }
+  if (status === 'failed') {
     return <AlertTriangle size={16} strokeWidth={1.75} className="text-[#f2635a]" />
   }
   return <Circle size={16} strokeWidth={1.75} className="text-[var(--muted-text)]" />
@@ -63,6 +68,8 @@ export default function AgentTimeline({ steps }: { steps: AgentStep[] }) {
                     ? 'warning'
                     : step.status === 'escalated'
                       ? 'danger'
+                      : step.status === 'failed'
+                        ? 'danger'
                       : 'neutral'
             }
             className="shrink-0 mt-0.5"

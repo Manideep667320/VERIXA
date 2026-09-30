@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -113,6 +114,19 @@ class AgentState(BaseModel):
     final_response: str = ""
     status: str = "PENDING"
     error: str | None = None
+    workflow_mode: Literal["shadow", "supervised", "autonomous"] = "shadow"
+    failed_stage: str | None = None
+    stage_statuses: dict[str, Literal["queued", "complete", "failed", "skipped"]] = Field(
+        default_factory=lambda: {
+            "understanding_request": "queued",
+            "retrieving_evidence": "queued",
+            "reasoning": "queued",
+            "preparing_action_plan": "queued",
+            "evaluating_policy": "queued",
+            "executing_actions": "queued",
+            "verifying_outcome": "queued",
+        }
+    )
 
 
 # ── Approval ────────────────────────────────────────────────────────────

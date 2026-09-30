@@ -15,7 +15,7 @@ export default function PolicyStatus({ policy }: { policy: PolicyResult | null }
 
       {policy === null ? (
         <p className="mt-3 text-[12px] leading-[1.6] text-[var(--muted-text)]">
-          No policy checked yet.
+          Policy evaluation was not completed.
         </p>
       ) : (
         <div className="mt-2.5 flex items-center justify-between gap-2">

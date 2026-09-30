@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import AppShell from '@/components/shell/AppShell'
 import RequestLibrary from '@/components/agent/RequestLibrary'
@@ -15,26 +15,37 @@ import { saveLastRun } from '@/lib/lastRun'
 
 const STEP_DEFS = [
   {
+    stage: 'understanding_request',
     title: 'Understanding request',
     description: 'Extracting intent and entities from the request.',
   },
   {
+    stage: 'retrieving_evidence',
     title: 'Retrieving evidence',
     description: 'Searching SOPs, manuals, policies, and incident history.',
   },
   {
-    title: 'Evaluating policy',
-    description: 'Checking risk, permissions, and policy compliance.',
+    stage: 'reasoning',
+    title: 'Reasoning over evidence',
+    description: 'Assessing evidence strength, conflicts, and confidence.',
   },
   {
+    stage: 'preparing_action_plan',
     title: 'Preparing action plan',
     description: 'Assembling a structured, schema-validated action.',
   },
   {
+    stage: 'evaluating_policy',
+    title: 'Evaluating policy',
+    description: 'Checking risk, permissions, and policy compliance.',
+  },
+  {
+    stage: 'executing_actions',
     title: 'Executing actions',
     description: 'Running the authorized action through enterprise tools.',
   },
   {
+    stage: 'verifying_outcome',
     title: 'Verifying outcome',
     description: "Confirming the executed action reached its intended state.",
   },
@@ -47,20 +58,21 @@ const DECISION_COPY: Record<string, { label: string; tone: StatusTone }> = {
 }
 
 function initialSteps(): AgentStep[] {
-  return STEP_DEFS.map((s) => ({ ...s, status: 'queued' as const }))
+  return STEP_DEFS.map(({ stage: _stage, ...step }) => ({ ...step, status: 'queued' as const }))
 }
 
 function finalSteps(state: AgentState): AgentStep[] {
-  const decision = state.autonomy_decision
-  return STEP_DEFS.map((s, i) => {
-    let status: StepStatus = 'complete'
-    if (decision === 'ESCALATE') {
-      // Only the understanding + retrieval steps genuinely ran before escalation.
-      status = i <= 1 ? 'complete' : 'escalated'
-    } else if (decision === 'APPROVAL_REQUIRED') {
-      status = i <= 3 ? 'complete' : i === 4 ? 'waiting' : 'queued'
-    }
-    return { ...s, status }
+  return STEP_DEFS.map(({ stage, ...step }) => {
+    const actualStatus = state.stage_statuses?.[stage] ?? 'queued'
+    const status: StepStatus = actualStatus === 'queued' ? 'skipped' : actualStatus
+    return { ...step, status }
+  })
+}
+
+function runningSteps(): AgentStep[] {
+  return STEP_DEFS.map(({ stage: _stage, ...step }, index) => {
+    const status: StepStatus = index === 0 ? 'in_progress' : 'queued'
+    return { ...step, status }
   })
 }
 
@@ -73,43 +85,20 @@ export default function AgentWorkspacePage() {
   const [isRunning, setIsRunning] = useState(false)
   const [response, setResponse] = useState<AgentState | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const timerRef = useRef<number | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current)
-    }
-  }, [])
 
   const runAgent = async () => {
     if (!requestText.trim() || isRunning) return
     setIsRunning(true)
     setErrorMessage(null)
     setResponse(null)
-    setSteps(initialSteps())
-
-    let cursor = 0
-    timerRef.current = window.setInterval(() => {
-      cursor += 1
-      setSteps((prev) =>
-        prev.map((step, i) => ({
-          ...step,
-          status: i < cursor ? 'complete' : i === cursor ? 'in_progress' : 'queued',
-        }))
-      )
-      if (cursor >= STEP_DEFS.length - 1 && timerRef.current) {
-        window.clearInterval(timerRef.current)
-      }
-    }, 550)
+    setSteps(runningSteps())
 
     try {
       const result = await shadowApi.run({ request: requestText, mode: 'shadow' })
-      if (timerRef.current) window.clearInterval(timerRef.current)
       setResponse(result)
       saveLastRun(result)
       setSteps(finalSteps(result))
     } catch (err) {
-      if (timerRef.current) window.clearInterval(timerRef.current)
       setErrorMessage(
         err instanceof Error ? err.message : 'Could not reach the agent service.'
       )
@@ -176,6 +165,15 @@ export default function AgentWorkspacePage() {
             </div>
             <AgentTimeline steps={steps} />
 
+            {response?.error && (
+              <div
+                role="alert"
+                className="mt-3 rounded-md border border-[#f2635a]/30 bg-[#f2635a]/10 p-3 text-[12px] leading-[1.6] text-[#ff938b]"
+              >
+                Run stopped during {response.failed_stage?.replaceAll('_', ' ') ?? 'agent processing'}: {response.error}
+              </div>
+            )}
+
             {response?.reasoning_summary && (
               <div className="mt-3 pt-3 border-t border-white/5">
                 <div className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted-text)] font-medium mb-1">
@@ -213,7 +211,7 @@ export default function AgentWorkspacePage() {
 
         <div className="flex flex-col gap-4">
           <EvidencePanel evidence={response?.evidence ?? []} />
-          <ConfidenceMeter confidence={response?.evidence_confidence ?? null} />
+          <ConfidenceMeter confidence={response?.reasoning_summary ? response.evidence_confidence : null} />
           <RiskCard risk={response?.risk_level ?? null} />
           <PolicyStatus policy={response?.policy_result ?? null} />
         </div>

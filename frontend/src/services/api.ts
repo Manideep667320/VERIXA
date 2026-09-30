@@ -82,6 +82,9 @@ export interface AgentState {
   final_response: string;
   status: string;
   error: string | null;
+  workflow_mode: 'shadow' | 'supervised' | 'autonomous';
+  failed_stage: string | null;
+  stage_statuses: Record<string, 'queued' | 'complete' | 'failed' | 'skipped'>;
 }
 
 // ── Agent (legacy stub route — kept for compatibility) ──────────────────
