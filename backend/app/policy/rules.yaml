@@ -1,0 +1,61 @@
+version: 1
+confidence_threshold: 0.70
+approval_amount_threshold: 5000
+approval_risk_levels:
+  - HIGH
+risk_levels:
+  LOW: 0
+  MEDIUM: 1
+  HIGH: 2
+  UNKNOWN: 3
+actions:
+  create_service_ticket:
+    allowed: true
+    risk_level: LOW
+    requires_approval: false
+  assign_technician:
+    allowed: true
+    risk_level: MEDIUM
+    requires_approval: false
+  replace_product:
+    allowed: true
+    risk_level: HIGH
+    requires_approval: true
+  issue_refund:
+    allowed: true
+    risk_level: HIGH
+    requires_approval: false
+    requires_approval_above: 50000
+  send_notification:
+    allowed: true
+    risk_level: MEDIUM
+    requires_approval: false
+  lookup_customer:
+    allowed: true
+    risk_level: LOW
+    requires_approval: false
+approval_routing:
+  timeout_seconds: 900
+  human_queue: human_queue
+  default_roles:
+    - service_manager
+    - operations_director
+  routes:
+    - name: high_risk
+      min_amount: 0
+      risk_levels:
+        - HIGH
+        - UNKNOWN
+      approver_roles:
+        - risk_director
+        - executive_approver
+      priority: 20
+    - name: high_amount
+      min_amount: 5000
+      risk_levels:
+        - LOW
+        - MEDIUM
+      approver_roles:
+        - finance_manager
+        - executive_approver
+      priority: 10

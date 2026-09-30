@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -33,6 +34,35 @@ class Settings(BaseSettings):
 
     # Logging
     log_level: str = "INFO"
+
+    # Ticket-system connector
+    connector_provider: Literal["mock", "jira"] = "mock"
+    connector_timeout_seconds: float = 5.0
+    jira_base_url: str = ""
+    jira_email: str = ""
+    jira_api_token: str = ""
+    jira_project_key: str = ""
+    jira_issue_type: str = "Task"
+
+    # Approval routing and notifier integrations
+    approval_notifier: Literal["mock", "slack", "email"] = "mock"
+    approval_timeout_seconds: int | None = Field(default=None, ge=1)
+    slack_bot_token: str = ""
+    slack_signing_secret: str = ""
+    slack_approval_channel: str = ""
+    approval_role_slack_users: dict[str, list[str]] = Field(default_factory=dict)
+    approval_link_secret: str = ""
+    approval_public_base_url: str = "http://localhost:8000"
+    approval_role_email_recipients: dict[str, list[str]] = Field(default_factory=dict)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+
+    # Analytics estimates (used only for presentation; no policy side effects)
+    analytics_minutes_per_case: float = Field(default=15.0, ge=0)
+    analytics_cost_per_hour: float = Field(default=50.0, ge=0)
 
     # Paths
     @property
