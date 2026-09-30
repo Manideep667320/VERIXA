@@ -121,10 +121,10 @@ async def run_agent(request: str, *, llm: LLMProvider | None = None,
                     retriever: Retriever | None = None) -> AgentState:
     """Run REQUEST → INTENT → RETRIEVAL → REASONING → ACTION_PLAN → POLICY_CHECK → DECISION."""
     state = AgentState(request=request)
-    provider = llm or get_llm()
     evidence_retriever = retriever or retrieve
     state, _ = await request_node(state)
     try:
+        provider = llm or get_llm()
         state = await intent_node(state, provider)
         state, _ = await retrieval_node(state, evidence_retriever)
         state, reasoning = await reasoning_node(state, provider)

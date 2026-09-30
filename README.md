@@ -1,4 +1,4 @@
-# Evidence-to-Action Enterprise AI Agent
+# VERIXA Evidence-to-Action Enterprise AI Agent
 
 > Policy-aware, risk-controlled, evidence-backed workflow automation for customer/field-service incident resolution.
 

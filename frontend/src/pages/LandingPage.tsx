@@ -1,23 +1,31 @@
-import React, { useState } from 'react'
 import BackgroundVideo from '../components/BackgroundVideo'
 import Navbar from '../components/Navbar'
 import HeroSection from '../components/HeroSection'
-import StatsFooter from '../components/StatsFooter'
+import PipelineSection from '../components/PipelineSection'
+import OutcomesSection from '../components/OutcomesSection'
+import GuardrailsBand from '../components/GuardrailsBand'
+import AuditTrailSection from '../components/AuditTrailSection'
+import ClosingCTA from '../components/ClosingCTA'
 
 export default function LandingPage() {
-  const [activeNav, setActiveNav] = useState('Home')
-
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden select-none">
-      {/* Full-bleed looping background video */}
-      <BackgroundVideo />
+    <div className="relative bg-black text-white">
+      <Navbar />
 
-      {/* Single viewport page container */}
-      <div className="relative z-1 flex flex-col items-center justify-between h-screen h-[100dvh] overflow-hidden px-[clamp(14px,3vw,32px)] py-[clamp(16px,2.4vh,28px)]">
-        <Navbar activeNav={activeNav} onNavChange={setActiveNav} />
-        <HeroSection />
-        <StatsFooter />
-      </div>
+      {/* Locked single-viewport hero */}
+      <section id="home" className="relative h-screen h-[100dvh] overflow-hidden">
+        <BackgroundVideo />
+        <div className="relative z-1 flex flex-col items-center justify-center h-full px-[clamp(14px,3vw,32px)] pt-[clamp(96px,14vh,120px)] pb-[clamp(16px,2.4vh,28px)]">
+          <HeroSection />
+        </div>
+      </section>
+
+      {/* Scrollable content below the fold */}
+      <PipelineSection />
+      <OutcomesSection />
+      <GuardrailsBand />
+      <AuditTrailSection />
+      <ClosingCTA />
     </div>
   )
 }
