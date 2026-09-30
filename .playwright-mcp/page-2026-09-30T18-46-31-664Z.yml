@@ -1,0 +1,117 @@
+- generic [ref=f3e3]:
+  - banner [ref=f3e4]:
+    - link "Home" [ref=f3e5] [cursor=pointer]:
+      - /url: "#home"
+      - img "Evidence-to-Action" [ref=f3e6]
+    - button "Close menu" [expanded] [active] [ref=f3e242]
+  - navigation "Mobile" [ref=f3e244]:
+    - link "Home" [ref=f3e245] [cursor=pointer]:
+      - /url: "#home"
+    - link "Decision Layer" [ref=f3e246] [cursor=pointer]:
+      - /url: "#decision-layer"
+    - link "Outcomes" [ref=f3e247] [cursor=pointer]:
+      - /url: "#outcomes"
+    - link "Guardrails" [ref=f3e248] [cursor=pointer]:
+      - /url: "#guardrails"
+    - link "Audit Trail" [ref=f3e249] [cursor=pointer]:
+      - /url: "#audit-trail"
+    - link "Launch App" [ref=f3e250] [cursor=pointer]:
+      - /url: /agent
+  - main [ref=f3e13]:
+    - heading "Evidence-Backed Enterprise Action" [level=1] [ref=f3e14]:
+      - generic [ref=f3e15]: Evidence-Backed
+      - generic [ref=f3e16]: Enterprise Action
+    - paragraph [ref=f3e17]: An AI agent that turns policy, evidence and risk into accountable action — executing when it's safe, asking for approval when it isn't, and refusing when the evidence doesn't hold up.
+    - link "See It Decide" [ref=f3e18] [cursor=pointer]:
+      - /url: /agent
+  - generic [ref=f3e20]:
+    - generic [ref=f3e21]: The Decision Layer
+    - heading "Evidence In. Accountable Action Out." [level=2] [ref=f3e24]
+    - paragraph [ref=f3e26]: Every request moves through the same deterministic pipeline — no step is skipped, and no action reaches a system of record without passing through policy and risk control first.
+    - generic [ref=f3e29]:
+      - generic [ref=f3e30]: Request
+      - generic [ref=f3e36]: Evidence
+      - generic [ref=f3e43]: Reasoning
+      - generic [ref=f3e55]: Policy
+      - generic [ref=f3e62]: Action / Approval
+      - generic [ref=f3e68]: Verification
+      - generic [ref=f3e75]: Audit
+  - generic [ref=f3e86]:
+    - generic [ref=f3e87]: Bounded Autonomy
+    - heading "Three Outcomes. Never A Fourth." [level=2] [ref=f3e90]
+    - paragraph [ref=f3e92]: The agent never improvises past what evidence and policy allow. Every request forks into exactly one of these.
+    - generic [ref=f3e98]:
+      - generic [ref=f3e99]:
+        - generic [ref=f3e101]: Low Risk
+        - heading "Execute" [level=3] [ref=f3e104]
+        - paragraph [ref=f3e105]: "\"Customer reports Product X overheating and is under warranty. Create a service case and assign an available technician.\""
+        - generic [ref=f3e106]: EXECUTED
+      - generic [ref=f3e107]:
+        - generic [ref=f3e109]: High Risk
+        - heading "Request Approval" [level=3] [ref=f3e112]
+        - paragraph [ref=f3e113]: "\"The customer’s machine has a severe failure. Arrange a replacement unit.\""
+        - generic [ref=f3e114]: APPROVAL REQUIRED
+      - generic [ref=f3e115]:
+        - generic [ref=f3e117]: Unclear Evidence
+        - heading "Escalate" [level=3] [ref=f3e120]
+        - paragraph [ref=f3e121]: "\"The customer wants Product Y replaced immediately because it is overheating.\""
+        - generic [ref=f3e122]: ESCALATED — NO ACTION TAKEN
+  - generic [ref=f3e124]:
+    - generic [ref=f3e125]: Bounded By Design
+    - paragraph [ref=f3e128]: The LLM proposes. Deterministic application code authorizes, executes, and remembers.
+    - generic [ref=f3e130]:
+      - generic [ref=f3e131]: LLM Proposes
+      - generic [ref=f3e132]: Schema Validated
+      - generic [ref=f3e138]: Policy Enforced
+      - generic [ref=f3e144]: Human-in-the-Loop
+      - generic [ref=f3e150]: Fully Audited
+      - generic [ref=f3e156]: Executes
+  - generic [ref=f3e158]:
+    - generic [ref=f3e159]: The Audit Trail
+    - heading "Every Decision, Explained" [level=2] [ref=f3e162]
+    - paragraph [ref=f3e164]: No hidden chain-of-thought. Just a concise, evidence-linked timeline of what the agent saw, decided, and did.
+    - generic [ref=f3e166]:
+      - generic [ref=f3e167]:
+        - generic [ref=f3e168]: RUN-1042
+        - generic [ref=f3e174]: Completed
+      - generic [ref=f3e177]:
+        - generic [ref=f3e180]:
+          - generic [ref=f3e181]: 12:03
+          - generic [ref=f3e182]: Request received
+        - generic [ref=f3e185]:
+          - generic [ref=f3e186]: 12:03
+          - generic [ref=f3e187]: Evidence retrieved
+        - generic [ref=f3e190]:
+          - generic [ref=f3e191]: 12:04
+          - generic [ref=f3e192]: Decision generated
+        - generic [ref=f3e195]:
+          - generic [ref=f3e196]: 12:04
+          - generic [ref=f3e197]: Policy checked
+        - generic [ref=f3e200]:
+          - generic [ref=f3e201]: 12:04
+          - generic [ref=f3e202]: Approval requested
+        - generic [ref=f3e205]:
+          - generic [ref=f3e206]: 12:06
+          - generic [ref=f3e207]: Approval granted
+        - generic [ref=f3e210]:
+          - generic [ref=f3e211]: 12:06
+          - generic [ref=f3e212]: Ticket created
+        - generic [ref=f3e215]:
+          - generic [ref=f3e216]: 12:06
+          - generic [ref=f3e217]: Technician assigned
+        - generic [ref=f3e220]:
+          - generic [ref=f3e221]: 12:07
+          - generic [ref=f3e222]: Customer notified
+        - generic [ref=f3e225]:
+          - generic [ref=f3e226]: 12:07
+          - generic [ref=f3e227]: Actions verified
+      - generic [ref=f3e228]:
+        - generic [ref=f3e229]: Duration 4m 32s
+        - generic [ref=f3e230]: 5 evidence sources
+        - generic [ref=f3e231]: 1 approval
+  - generic [ref=f3e233]:
+    - heading "Act When Safe. Ask When Necessary. Explain Always." [level=2] [ref=f3e235]: Act When Safe. Ask When Necessary.Explain Always.
+    - paragraph [ref=f3e237]: We don't give an AI unrestricted access to enterprise systems. We give it evidence, bounded actions, policy, and verification.
+    - link "Request A Demo" [ref=f3e239] [cursor=pointer]:
+      - /url: /agent
+    - paragraph [ref=f3e241]: © 2026 Verixa — Evidence-to-Action Enterprise AI Agent
