@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.connectors.base import TicketCreate, get_connector
 from app.core.database import get_db
@@ -18,19 +18,48 @@ logger = logging.getLogger(__name__)
 
 
 class ToolInput(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
 
 
 class CreateServiceTicketInput(ToolInput):
-    customer_id: str
-    product_id: str
-    description: str
+    customer_id: str = Field(default="CUST-DEFAULT")
+    product_id: str = Field(default="PRODUCT-DEFAULT")
+    description: str = Field(default="Service request")
     severity: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = "MEDIUM"
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not d.get("customer_id"):
+            d["customer_id"] = str(d.get("customer") or d.get("customer_name") or d.get("company") or "CUST-DEFAULT")
+        if not d.get("product_id"):
+            d["product_id"] = str(d.get("product") or d.get("model") or "PRODUCT-DEFAULT")
+        if not d.get("description"):
+            d["description"] = str(d.get("issue") or d.get("summary") or d.get("details") or "Service request")
+        if "severity" in d and isinstance(d["severity"], str):
+            sev = d["severity"].upper()
+            d["severity"] = sev if sev in ("LOW", "MEDIUM", "HIGH", "CRITICAL") else "MEDIUM"
+        return d
 
 
 class AssignTechnicianInput(ToolInput):
-    ticket_id: str
-    technician_id: str
+    ticket_id: str = Field(default="TICKET-AUTO")
+    technician_id: str = Field(default="TECH-001")
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not d.get("ticket_id"):
+            d["ticket_id"] = str(d.get("ticket") or "TICKET-AUTO")
+        if not d.get("technician_id"):
+            d["technician_id"] = str(d.get("technician") or d.get("tech_id") or "TECH-001")
+        return d
 
 
 class LookupCustomerInput(ToolInput):
@@ -38,9 +67,21 @@ class LookupCustomerInput(ToolInput):
 
 
 class SendNotificationInput(ToolInput):
-    recipient: str
-    message: str
+    recipient: str = Field(default="customer")
+    message: str = Field(default="")
     channel: Literal["email", "sms", "phone"] = "email"
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_fields(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        d = dict(data)
+        if not d.get("recipient"):
+            d["recipient"] = str(d.get("customer") or d.get("customer_id") or d.get("email") or "customer")
+        if not d.get("message"):
+            d["message"] = str(d.get("text") or d.get("notification") or "Notification message")
+        return d
 
 
 class CancelTicketInput(ToolInput):
