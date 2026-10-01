@@ -159,8 +159,14 @@ class JiraConnector(Connector):
         cancel_transition = next((item for item in candidates if
                                   "cancel" in str((item.get("to") or {}).get("name", "")).lower()), None)
         if cancel_transition is None:
+            available = ", ".join(
+                str((item.get("to") or {}).get("name") or item.get("name") or "unnamed")
+                for item in candidates
+            ) or "none"
             raise ConnectorError(
-                f"Jira issue {ticket_id} has no available Cancel transition; configure the sandbox workflow."
+                f"Jira issue {ticket_id} has no available Cancel transition "
+                f"(available transitions: {available}). Add a Cancel/Canceled transition "
+                "to the Jira workflow or configure the connector for a project with rollback support."
             )
         await self._request("POST", f"issue/{_path_quote(ticket_id)}/transitions",
                             json_body={"transition": {"id": str(cancel_transition["id"])}})

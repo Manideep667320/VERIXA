@@ -23,31 +23,108 @@ export default function ApprovalCenterPage() {
   const [escalateError, setEscalateError] = useState<string | null>(null)
   const [isEscalating, setIsEscalating] = useState(false)
   const [pending, setPending] = useState<PendingApproval[]>([])
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   useEffect(() => {
     policyApi.versions().then(setPolicy).catch(() => setPolicy(null))
-    approvalApi.pending().then(setPending).catch(() => setPending([]))
+    approvalApi.pending().then((data) => {
+      setPending(data)
+      if (data.length > 0 && !approvalId) {
+        selectApproval(data[0])
+      }
+    }).catch(() => setPending([]))
   }, [])
 
   const active = policy?.versions.find((v) => v.active)
+
+  const selectApproval = async (item: PendingApproval) => {
+    setApprovalId(item.approval_id)
+    setLookupError(null)
+    setSuccessMessage(null)
+    if (item.current_role && item.roles) {
+      setRoute({
+        approval_id: item.approval_id,
+        current_role: item.current_role,
+        roles: item.roles,
+        role_index: 0,
+        human_queue: item.human_queue || 'human_queue',
+        timeout_seconds: item.timeout_seconds || 900,
+        expires_at: item.expires_at || null,
+        status: item.route_status || 'PENDING',
+        decided_by: null,
+      })
+    } else {
+      setRoute(null)
+    }
+    try {
+      const latest = await approvalApi.routing(item.approval_id)
+      setRoute(latest)
+    } catch {
+      try {
+        const routed = await approvalApi.route(item.approval_id)
+        setRoute(routed)
+      } catch {
+        // keep existing route
+      }
+    }
+  }
 
   const withBusy = async (label: string, fn: () => Promise<ApprovalRoute | unknown>) => {
     if (!approvalId.trim()) return
     setBusyAction(label)
     setLookupError(null)
+    setSuccessMessage(null)
     try {
       const result = await fn()
       if (result && typeof result === 'object' && 'roles' in result) {
         setRoute(result as ApprovalRoute)
       }
-      if (label === 'approve' || label === 'reject') {
+      if (label === 'approve') {
+        setSuccessMessage(`✓ Approval ${approvalId.trim()} successfully approved and executed! State verified.`)
         setPending((current) => current.filter((item) => item.approval_id !== approvalId.trim()))
+        setRoute(null)
+        setApprovalId('')
+      } else if (label === 'reject') {
+        setSuccessMessage(`✓ Approval ${approvalId.trim()} has been rejected.`)
+        setPending((current) => current.filter((item) => item.approval_id !== approvalId.trim()))
+        setRoute(null)
+        setApprovalId('')
       }
     } catch (err) {
       setLookupError(err instanceof Error ? err.message : `${label} failed.`)
     } finally {
       setBusyAction(null)
     }
+  }
+
+  const getRiskBadge = (risk: string) => {
+    const normalized = (risk || 'UNKNOWN').toUpperCase()
+    if (normalized === 'HIGH') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border border-rose-500/40 bg-rose-500/15 text-rose-300">
+          HIGH RISK
+        </span>
+      )
+    }
+    if (normalized === 'MEDIUM') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border border-amber-500/40 bg-amber-500/15 text-amber-300">
+          MEDIUM RISK
+        </span>
+      )
+    }
+    if (normalized === 'LOW') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border border-emerald-500/40 bg-emerald-500/15 text-emerald-300">
+          LOW RISK
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border border-white/20 bg-white/5 text-[var(--muted-text)]">
+        UNKNOWN RISK
+      </span>
+    )
   }
 
   const escalateDue = async () => {
@@ -82,35 +159,53 @@ export default function ApprovalCenterPage() {
           </p>
           {pending.length > 0 && (
             <div className="mb-3 space-y-2">
-              {pending.map((item) => (
-                <button
-                  key={item.approval_id}
-                  type="button"
-                  onClick={() => {
-                    setApprovalId(item.approval_id)
-                    setLookupError(null)
-                    setRoute(null)
-                  }}
-                  className={`w-full rounded-md border p-3 text-left transition-colors ${
-                    approvalId === item.approval_id
-                      ? 'border-amber-300/50 bg-amber-300/10'
-                      : 'border-white/10 bg-black/20 hover:border-white/25'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="font-mono text-[11px] text-amber-200">{item.approval_id}</span>
-                    <span className="text-[11px] uppercase text-[var(--muted-text)]">{item.risk_level} risk</span>
-                  </div>
-                  <div className="mt-1 text-[12.5px] text-white">{item.action_type.replaceAll('_', ' ')}</div>
-                  <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--muted-text)]">{item.request}</div>
-                </button>
-              ))}
+              {pending.map((item) => {
+                const amountVal = item.arguments?.amount ?? item.arguments?.cost
+                return (
+                  <button
+                    key={item.approval_id}
+                    type="button"
+                    onClick={() => selectApproval(item)}
+                    className={`w-full rounded-md border p-3 text-left transition-colors ${
+                      approvalId === item.approval_id
+                        ? 'border-amber-300/50 bg-amber-300/10'
+                        : 'border-white/10 bg-black/20 hover:border-white/25'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="font-mono text-[11px] text-amber-200">{item.approval_id}</span>
+                      <div className="flex items-center gap-2">
+                        {amountVal !== undefined && (
+                          <span className="font-mono text-[11px] text-amber-300/90 font-medium">
+                            Cost: {typeof amountVal === 'number' ? `$${amountVal.toLocaleString()}` : String(amountVal)}
+                          </span>
+                        )}
+                        {item.current_role && (
+                          <span className="text-[10.5px] text-[var(--muted-text)]">
+                            Assigned: <span className="text-white font-medium">{item.current_role.replace('_', ' ')}</span>
+                          </span>
+                        )}
+                        {getRiskBadge(item.risk_level)}
+                      </div>
+                    </div>
+                    <div className="mt-1 text-[12.5px] text-white font-medium capitalize">
+                      {item.action_type.replaceAll('_', ' ')}
+                    </div>
+                    <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--muted-text)]">
+                      {item.request}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
           <div className="flex gap-2">
             <Input
               value={approvalId}
-              onChange={(e) => setApprovalId(e.target.value)}
+              onChange={(e) => {
+                setApprovalId(e.target.value)
+                setSuccessMessage(null)
+              }}
               placeholder="APR-1042"
               className="bg-black/40 font-mono"
             />
@@ -154,6 +249,7 @@ export default function ApprovalCenterPage() {
           </div>
 
           {lookupError && <p className="mt-3 text-[12.5px] text-[#f2635a]">{lookupError}</p>}
+          {successMessage && <p className="mt-3 text-[12.5px] text-emerald-400 font-medium">{successMessage}</p>}
 
           {route && (
             <div className="mt-4 pt-4 border-t border-white/5 flex flex-col gap-2">

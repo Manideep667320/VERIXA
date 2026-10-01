@@ -41,28 +41,71 @@ async def pending_approvals():
     await advance_expired_approvals()
     with get_db() as conn:
         rows = conn.execute(
-            """SELECT p.id AS approval_id, p.run_id, p.reason, p.status,
+            """SELECT p.id AS approval_id, p.run_id, p.reason, p.status, p.action_id,
                       a.action_type, a.arguments, a.risk_level,
-                      r.request, r.autonomy_decision
+                      r.request, r.autonomy_decision, r.risk_level AS run_risk_level,
+                      ar.current_role, ar.human_queue, ar.status AS route_status,
+                      ar.timeout_seconds, ar.expires_at, ar.roles AS route_roles
                FROM approvals p
                JOIN actions a ON a.id = p.action_id AND a.run_id = p.run_id
                JOIN runs r ON r.id = p.run_id
+               LEFT JOIN approval_routes ar ON ar.approval_id = p.id
                WHERE p.status = 'PENDING'
                ORDER BY p.created_at DESC"""
         ).fetchall()
-    return [
-        {
+
+    results = []
+    for row in rows:
+        action_args = _decode(row["arguments"], {})
+        amount = _amount(action_args)
+        risk = row["risk_level"]
+        if not risk or risk == "UNKNOWN":
+            if row["run_risk_level"] and row["run_risk_level"] != "UNKNOWN":
+                risk = row["run_risk_level"]
+            elif row["action_type"] in {"replace_product", "issue_refund"} or amount >= 5000:
+                risk = "HIGH"
+            else:
+                risk = "HIGH"
+            with get_db() as conn:
+                conn.execute("UPDATE actions SET risk_level = ? WHERE id = ?", (risk, row["action_id"]))
+                conn.execute("UPDATE runs SET risk_level = ? WHERE id = ?", (risk, row["run_id"]))
+
+        current_role = row["current_role"]
+        roles = _decode(row["route_roles"], [])
+        human_queue = row["human_queue"]
+        route_status = row["route_status"]
+        expires_at = row["expires_at"]
+        timeout_seconds = row["timeout_seconds"]
+
+        if not current_role:
+            try:
+                route = await route_approval(row["approval_id"], amount=amount, risk_level=risk)
+                current_role = route.current_role
+                roles = route.roles
+                human_queue = route.human_queue
+                route_status = route.status
+                expires_at = route.expires_at.isoformat() if route.expires_at else None
+                timeout_seconds = route.timeout_seconds
+            except Exception:
+                pass
+
+        results.append({
             "approval_id": row["approval_id"],
             "run_id": row["run_id"],
             "request": row["request"],
             "reason": row["reason"],
             "action_type": row["action_type"],
-            "arguments": _decode(row["arguments"], {}),
-            "risk_level": row["risk_level"],
+            "arguments": action_args,
+            "risk_level": risk,
             "decision": row["autonomy_decision"],
-        }
-        for row in rows
-    ]
+            "current_role": current_role,
+            "roles": roles,
+            "human_queue": human_queue,
+            "route_status": route_status,
+            "expires_at": expires_at,
+            "timeout_seconds": timeout_seconds,
+        })
+    return results
 
 
 def _decode(value: str | None, fallback):
@@ -134,13 +177,19 @@ def _pending_approval(approval_id: str):
 
 
 def _action_from_row(row: dict) -> ActionContract:
+    risk = row.get("risk_level")
+    if not risk or risk == "UNKNOWN":
+        if row.get("action_type") in {"replace_product", "issue_refund"}:
+            risk = "HIGH"
+        else:
+            risk = "UNKNOWN"
     return ActionContract(
         id=row["action_id"],
         action_type=row["action_type"],
         arguments=_decode(row["arguments"], {}),
         reason=row["action_reason"] or "",
         evidence_ids=_decode(row["evidence_ids"], []),
-        risk_level=row["risk_level"] or "UNKNOWN",
+        risk_level=risk,
         requires_approval=True,
     )
 
@@ -268,9 +317,12 @@ async def start_approval_routing(approval_id: str):
     row = _pending_approval(approval_id)
     arguments = _decode(row["arguments"], {})
     amount = _amount(arguments)
+    risk = row["risk_level"]
+    if not risk or risk == "UNKNOWN":
+        risk = "HIGH"
     try:
         route = await route_approval(approval_id, amount=amount,
-                                     risk_level=row["risk_level"] or "UNKNOWN")
+                                     risk_level=risk)
     except RoutingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return route.model_dump(mode="json")
@@ -288,7 +340,24 @@ async def get_approval_routing(approval_id: str):
     await advance_expired_approvals()
     route = get_approval_route(approval_id)
     if route is None:
-        raise HTTPException(status_code=404, detail="Approval has not been routed.")
+        with get_db() as conn:
+            row = conn.execute(
+                """SELECT p.id, a.arguments, a.risk_level, r.risk_level AS run_risk
+                   FROM approvals p
+                   JOIN actions a ON a.id = p.action_id AND a.run_id = p.run_id
+                   JOIN runs r ON r.id = p.run_id
+                   WHERE p.id = ? AND p.status = 'PENDING'""",
+                (approval_id,),
+            ).fetchone()
+        if row is not None:
+            args = _decode(row["arguments"], {})
+            amt = _amount(args)
+            risk = row["risk_level"]
+            if not risk or risk == "UNKNOWN":
+                risk = row["run_risk"] if row["run_risk"] and row["run_risk"] != "UNKNOWN" else "HIGH"
+            route = await route_approval(approval_id, amount=amt, risk_level=risk)
+        else:
+            raise HTTPException(status_code=404, detail="Approval has not been routed.")
     return route.model_dump(mode="json")
 
 

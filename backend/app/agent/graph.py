@@ -93,6 +93,13 @@ async def action_plan_node(state: AgentState, llm: LLMProvider,
 
 async def policy_check_node(state: AgentState) -> tuple[AgentState, PolicyCheckNodeOutput]:
     results = [evaluate_policy(action) for action in state.proposed_actions]
+    # Write policy-evaluated risk levels back onto each action so they don't stay UNKNOWN
+    updated_actions = [
+        action.model_copy(update={"risk_level": result.risk_level,
+                                  "requires_approval": result.requires_approval})
+        for action, result in zip(state.proposed_actions, results)
+    ]
+    state = state.model_copy(update={"proposed_actions": updated_actions})
     amounts = [_amount(action) for action in state.proposed_actions]
     amounts.extend(
         _coerce_amount(state.entities.get(key))

@@ -137,7 +137,10 @@ async def execute_plan(
             ))
             if verification.status != "VERIFIED":
                 final_decision = AutonomyDecision.ESCALATE
-                failure_reason = f"Rollback failed for {original.action_type}: {verification.details}"
+                failure_reason = (
+                    f"{failure_reason}; rollback failed for {original.action_type}: "
+                    f"{verification.details}"
+                )
 
     execution_results = [item[1] for item in attempted] + [item.result for item in compensations]
     verification_results = [item[2].model_dump(mode="json") for item in attempted]

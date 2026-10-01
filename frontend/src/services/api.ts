@@ -200,6 +200,12 @@ export interface PendingApproval {
   arguments: Record<string, unknown>;
   risk_level: string;
   decision: string;
+  current_role?: string;
+  roles?: string[];
+  human_queue?: string;
+  route_status?: string;
+  expires_at?: string | null;
+  timeout_seconds?: number;
 }
 
 export const approvalApi = {

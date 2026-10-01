@@ -62,6 +62,18 @@ async def verify_action(action: ActionContract, tool_result: object | None = Non
                     ).fetchone()
                     ok = row is not None and row["status"] == "SENT"
                     details = "Notification row exists with status SENT." if ok else "Notification row is missing or not SENT."
+                elif action.action_type == "replace_product":
+                    row = conn.execute(
+                        "SELECT status FROM product_replacements WHERE action_id = ?", (action.id,)
+                    ).fetchone()
+                    ok = row is not None and row["status"] in {"AUTHORIZED", "DISPATCHED"}
+                    details = "Product replacement authorization is persisted." if ok else "Product replacement record is missing."
+                elif action.action_type == "issue_refund":
+                    row = conn.execute(
+                        "SELECT status FROM refunds WHERE action_id = ?", (action.id,)
+                    ).fetchone()
+                    ok = row is not None and row["status"] in {"PROCESSED", "AUTHORIZED"}
+                    details = "Refund transaction is persisted." if ok else "Refund record is missing."
                 else:
                     return VerificationResult(
                         action_id=action.id, status="FAILED", verified=False,

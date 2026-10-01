@@ -162,10 +162,18 @@ async def _create_supervised_approval(state: AgentState, stage_statuses: dict[st
     with get_db() as conn:
         conn.execute(
             """INSERT OR REPLACE INTO runs
-               (id, request, evidence, policy_result, autonomy_decision, status)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (state.run_id, state.request, json.dumps([item.model_dump(mode="json") for item in state.evidence]),
+               (id, request, evidence, reasoning, entities, proposed_actions,
+                policy_result, risk_level, autonomy_decision, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (state.run_id, state.request,
+             json.dumps([item.model_dump(mode="json") for item in state.evidence]),
+             json.dumps({"summary": state.reasoning_summary,
+                         "confidence": state.evidence_confidence,
+                         "severity": state.severity.value}),
+             json.dumps(state.entities),
+             json.dumps([a.model_dump(mode="json") for a in state.proposed_actions]),
              json.dumps(state.policy_result.model_dump(mode="json") if state.policy_result else {}),
+             state.risk_level.value,
              state.autonomy_decision.value, "PENDING_APPROVAL"),
         )
         conn.execute(

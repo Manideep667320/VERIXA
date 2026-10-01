@@ -52,6 +52,22 @@ class UnassignTechnicianInput(ToolInput):
     original_action_id: str
 
 
+class ReplaceProductInput(ToolInput):
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+    product_id: str | None = "DEFAULT-UNIT"
+    customer_id: str | None = "CUSTOMER"
+    amount: float | str | None = 0.0
+    replacement_model: str | None = None
+    reason: str | None = None
+
+
+class IssueRefundInput(ToolInput):
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+    customer_id: str | None = "CUSTOMER"
+    amount: float | str | None = 0.0
+    reason: str | None = None
+
+
 _REGISTRY: dict[str, Callable] = {}
 _INPUT_SCHEMAS: dict[str, type[ToolInput]] = {
     "create_service_ticket": CreateServiceTicketInput,
@@ -60,6 +76,8 @@ _INPUT_SCHEMAS: dict[str, type[ToolInput]] = {
     "send_notification": SendNotificationInput,
     "cancel_ticket": CancelTicketInput,
     "unassign_technician": UnassignTechnicianInput,
+    "replace_product": ReplaceProductInput,
+    "issue_refund": IssueRefundInput,
 }
 
 COMPENSATIONS: dict[str, str] = {
@@ -76,6 +94,27 @@ def register_tool(action_type: str):
         return fn
 
     return decorator
+
+
+def _parse_amount(value: object) -> float:
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace("$", "").replace(",", "").strip())
+    except (ValueError, TypeError):
+        return 0.0
+
+
+@register_tool("replace_product")
+async def _replace_product_handler(action: ActionContract) -> ActionResult:
+    return await execute_action(action)
+
+
+@register_tool("issue_refund")
+async def _issue_refund_handler(action: ActionContract) -> ActionResult:
+    return await execute_action(action)
 
 
 def _ensure_tool_tables() -> None:
@@ -101,6 +140,14 @@ def _ensure_tool_tables() -> None:
             );
             CREATE TABLE IF NOT EXISTS customer_profiles (
                 customer_id TEXT PRIMARY KEY, profile_json TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS product_replacements (
+                replacement_id TEXT PRIMARY KEY, action_id TEXT NOT NULL UNIQUE,
+                product_id TEXT, customer_id TEXT, amount REAL NOT NULL, status TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS refunds (
+                refund_id TEXT PRIMARY KEY, action_id TEXT NOT NULL UNIQUE,
+                customer_id TEXT, amount REAL NOT NULL, status TEXT NOT NULL
             );
             """
         )
@@ -173,14 +220,38 @@ async def execute_action(action: ActionContract) -> ActionResult:
                 values["ticket_id"], action_id=values["original_action_id"],
             )
             data = ticket.model_dump(mode="json")
-        else:
+        elif action.action_type == "replace_product":
+            replacement_id = f"RPL-{action.id}"
+            amt = _parse_amount(values.get("amount", 0))
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO product_replacements(replacement_id, action_id, product_id, customer_id, amount, status) "
+                    "VALUES (?, ?, ?, ?, ?, 'AUTHORIZED')",
+                    (replacement_id, action.id, str(values.get("product_id") or "DEFAULT-UNIT"),
+                     str(values.get("customer_id") or "CUSTOMER"), amt),
+                )
+            data = {"replacement_id": replacement_id, "amount": amt, "status": "AUTHORIZED", **values}
+        elif action.action_type == "issue_refund":
+            refund_id = f"RFD-{action.id}"
+            amt = _parse_amount(values.get("amount", 0))
+            with get_db() as conn:
+                conn.execute(
+                    "INSERT OR REPLACE INTO refunds(refund_id, action_id, customer_id, amount, status) "
+                    "VALUES (?, ?, ?, ?, 'PROCESSED')",
+                    (refund_id, action.id, str(values.get("customer_id") or "CUSTOMER"), amt),
+                )
+            data = {"refund_id": refund_id, "amount": amt, "status": "PROCESSED", **values}
+        elif action.action_type == "send_notification":
             notification_id = f"NTF-{action.id}"
             with get_db() as conn:
                 conn.execute(
                     "INSERT INTO notifications VALUES (?, ?, ?, ?, ?, 'SENT')",
-                    (notification_id, action.id, values["recipient"], values["message"], values["channel"]),
+                    (notification_id, action.id, values.get("recipient", "ops@example.com"),
+                     values.get("message", "Notification"), values.get("channel", "email")),
                 )
             data = {"notification_id": notification_id, **values, "status": "SENT"}
+        else:
+            data = {**values, "status": "EXECUTED"}
         logger.info("Tool executed: %s", action.action_type)
         return ActionResult(success=True, action_id=action.id, data=data)
     except Exception as exc:
