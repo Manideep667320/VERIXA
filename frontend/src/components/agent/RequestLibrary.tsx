@@ -1,40 +1,61 @@
 import { Button } from '@/components/ui/button'
 
-interface RequestTemplate {
+export interface RequestTemplate {
   number: string
   title: string
   meta: string
   request: string
+  expectedDecision: 'EXECUTE' | 'APPROVAL_REQUIRED' | 'ESCALATE'
 }
 
-const TEMPLATES: RequestTemplate[] = [
+export const REQUEST_TEMPLATES: RequestTemplate[] = [
   {
     number: '01',
-    title: 'Customer reports overheating',
-    meta: 'Product X / warranty intake',
+    title: 'Autonomous execution',
+    meta: 'Low risk / diagnostic service ticket',
     request:
-      'Customer reported Product X overheating. The customer is under warranty. Handle it.',
+      'Customer CUST-001 reports that Product X (PX-100) is overheating. Create a high-priority diagnostic service ticket with the overheating details.',
+    expectedDecision: 'EXECUTE',
   },
   {
     number: '02',
-    title: 'Resolve overdue service request',
-    meta: 'Service queue / 4 days overdue',
+    title: 'Human approval required',
+    meta: 'High risk / replacement request',
     request:
-      'Resolve the overdue service request in the queue — it is now 4 days past due.',
+      "The customer's machine has a severe failure. Arrange a replacement unit costing $6,000.",
+    expectedDecision: 'APPROVAL_REQUIRED',
   },
   {
     number: '03',
-    title: 'Check replacement eligibility',
-    meta: 'Customer account / policy lookup',
+    title: 'Safety escalation',
+    meta: 'Insufficient evidence / Product Y',
     request:
-      'Check replacement eligibility for this customer account under the current warranty policy.',
+      'The customer wants us to immediately replace Product Y because it is overheating.',
+    expectedDecision: 'ESCALATE',
   },
   {
     number: '04',
-    title: 'Investigate recurring incident',
-    meta: 'Incident history / Product X',
+    title: 'Conflicting warranty terms',
+    meta: 'SOP-042 vs POL-WTY-001',
     request:
-      'Investigate the recurring overheating incidents reported for Product X over the last quarter.',
+      'Determine whether the PX-100 repair is covered before dispatching a technician. SOP-042 states the warranty is 18 months, while POL-WTY-001 states it is 24 months.',
+    expectedDecision: 'ESCALATE',
+  },
+  {
+    number: '05',
+    title: 'Conflicting overheating evidence',
+    meta: 'Product X / warranty conflict',
+    request:
+      'Product X is overheating and the customer asks for immediate service. The available overheating SOP and corporate warranty policy disagree about the PX-100 warranty term. Decide whether to create a ticket and assign a technician.',
+    expectedDecision: 'ESCALATE',
+  },
+  {
+    number: '06',
+    title: 'Conflicting replacement eligibility',
+    meta: 'Replacement / unresolved coverage',
+    request:
+      'The customer requests a $6,000 replacement for a failed PX-100. The replacement policy permits replacement after a severe failure, but the warranty sources conflict about whether this unit is covered. Determine the next step.',
+    expectedDecision: 'ESCALATE',
   },
 ]
 
@@ -50,7 +71,7 @@ export default function RequestLibrary({ onUseExample }: RequestLibraryProps) {
           Request Library
         </div>
         <div className="flex flex-col gap-2">
-          {TEMPLATES.map((t) => (
+          {REQUEST_TEMPLATES.map((t) => (
             <div
               key={t.number}
               className="rounded-lg border border-white/10 bg-white/[0.02] p-3"

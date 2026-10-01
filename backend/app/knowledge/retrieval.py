@@ -8,6 +8,7 @@ highest-scoring chunk per document is returned.
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 import chromadb
 
@@ -41,6 +42,16 @@ _DOC_TYPE_BOOST: dict[str, float] = {
     # Historical cases provide context, but cannot establish authoritative
     # action guidance on their own. Keep their confidence below the 0.70 gate.
     "INCIDENT": 0.69,
+}
+_TOKEN = re.compile(r"[a-z0-9_]+", re.IGNORECASE)
+_STOP_WORDS = {
+    "a", "an", "and", "are", "does", "for", "how", "i", "is", "of",
+    "the", "to", "what", "when", "where", "who", "why",
+}
+_DOMAIN_TERMS = {
+    "approval", "audit", "failure", "hash", "incident", "overheating",
+    "policy", "refund", "replacement", "service", "technician", "ticket",
+    "verification", "warranty",
 }
 
 
@@ -121,10 +132,20 @@ def retrieve(
 
     conflict_report = scan_knowledge_conflicts()
     conflicts_by_document: dict[str, list[dict]] = {}
+    query_terms = {
+        token.lower() for token in _TOKEN.findall(query)
+        if token.lower() not in _STOP_WORDS
+    }
     for conflict in conflict_report.conflicts:
         rendered = conflict.model_dump(mode="json")
-        conflicts_by_document.setdefault(conflict.document_a, []).append(rendered)
-        conflicts_by_document.setdefault(conflict.document_b, []).append(rendered)
+        conflict_terms = {
+            token.lower() for token in _TOKEN.findall(
+                f"{conflict.topic} {conflict.value_a} {conflict.value_b}"
+            )
+        }
+        if query_terms & conflict_terms:
+            conflicts_by_document.setdefault(conflict.document_a, []).append(rendered)
+            conflicts_by_document.setdefault(conflict.document_b, []).append(rendered)
     stale_by_document = {item.document_id: item.model_dump(mode="json")
                          for item in conflict_report.stale_documents}
 
@@ -148,6 +169,18 @@ def retrieve(
         # Apply document type boost for diagnostic queries
         boost = _DOC_TYPE_BOOST.get(doc_type_str, 1.0)
         boosted_similarity = min(1.0, similarity * boost)
+        content_terms = {token.lower() for token in _TOKEN.findall(documents[i])}
+        if query_terms:
+            lexical_match = len(query_terms & content_terms) / len(query_terms)
+            domain_matches = query_terms & content_terms & _DOMAIN_TERMS
+            if doc_type_str != "INCIDENT" and (
+                (len(query_terms) <= 4 and len(query_terms & content_terms) >= 2)
+                or domain_matches
+            ):
+                boosted_similarity = max(
+                    boosted_similarity,
+                    min(0.95, 0.60 + (0.35 * lexical_match)),
+                )
 
         start_line = meta.get("start_line", 0)
         end_line = meta.get("end_line", 0)

@@ -87,6 +87,21 @@ export interface AgentState {
   stage_statuses: Record<string, 'queued' | 'complete' | 'failed' | 'skipped'>;
 }
 
+export type ChatIntent = 'DATA' | 'CONCEPT' | 'MIXED' | 'ACTION' | 'OUT_OF_SCOPE'
+
+export interface ChatResponse {
+  turn_id: string;
+  thread_id: string;
+  tenant_id: string;
+  intent: ChatIntent;
+  answer: string;
+  sources: {
+    help_ids: string[];
+    knowledge_ids: string[];
+    run_ids: string[];
+  };
+}
+
 // ── Agent (legacy stub route — kept for compatibility) ──────────────────
 
 export interface AgentRunRequest {
@@ -113,11 +128,25 @@ export const agentApi = {
     request<AgentRunResponse>(`/agent/${runId}`),
 };
 
+export const chatApi = {
+  turn: (message: string, threadId?: string) =>
+    request<ChatResponse>('/chat/turn', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': 'tenant-a',
+      },
+      body: JSON.stringify({ message, thread_id: threadId }),
+    }),
+};
+
 // ── Shadow — the real, LLM-backed agent pipeline ─────────────────────────
+
+export type WorkflowMode = 'shadow' | 'supervised' | 'autonomous'
 
 export interface ShadowRunRequest {
   request: string;
-  mode?: 'shadow' | 'supervised' | 'autonomous';
+  mode?: WorkflowMode;
 }
 
 export interface ShadowMismatch {
@@ -162,7 +191,19 @@ export interface ApprovalRoute {
   decided_by: string | null;
 }
 
+export interface PendingApproval {
+  approval_id: string;
+  run_id: string;
+  request: string;
+  reason: string;
+  action_type: string;
+  arguments: Record<string, unknown>;
+  risk_level: string;
+  decision: string;
+}
+
 export const approvalApi = {
+  pending: () => request<PendingApproval[]>('/approvals/pending'),
   approve: (approvalId: string) =>
     request(`/approvals/${approvalId}/approve`, { method: 'POST' }),
 

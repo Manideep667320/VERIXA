@@ -212,7 +212,7 @@ export default function DecisionReviewPage() {
             />
           </div>
           <p className="text-[13.5px] leading-[1.6] text-white">
-            {run.final_response || '—'}
+            {run.final_response || run.reasoning_summary || run.policy_result?.reason || '—'}
           </p>
         </div>
 

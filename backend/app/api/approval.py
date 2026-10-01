@@ -35,6 +35,36 @@ from app.verification.verifier import verify_action
 router = APIRouter(prefix="/approvals", tags=["approvals"])
 
 
+@router.get("/pending")
+async def pending_approvals():
+    """Return pending approvals so the workspace can drive human review."""
+    await advance_expired_approvals()
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT p.id AS approval_id, p.run_id, p.reason, p.status,
+                      a.action_type, a.arguments, a.risk_level,
+                      r.request, r.autonomy_decision
+               FROM approvals p
+               JOIN actions a ON a.id = p.action_id AND a.run_id = p.run_id
+               JOIN runs r ON r.id = p.run_id
+               WHERE p.status = 'PENDING'
+               ORDER BY p.created_at DESC"""
+        ).fetchall()
+    return [
+        {
+            "approval_id": row["approval_id"],
+            "run_id": row["run_id"],
+            "request": row["request"],
+            "reason": row["reason"],
+            "action_type": row["action_type"],
+            "arguments": _decode(row["arguments"], {}),
+            "risk_level": row["risk_level"],
+            "decision": row["autonomy_decision"],
+        }
+        for row in rows
+    ]
+
+
 def _decode(value: str | None, fallback):
     if not value:
         return fallback

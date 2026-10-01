@@ -8,6 +8,7 @@ import {
   policyApi,
   type PolicyVersionsResponse,
   type ApprovalRoute,
+  type PendingApproval,
 } from '@/services/api'
 
 export default function ApprovalCenterPage() {
@@ -21,9 +22,11 @@ export default function ApprovalCenterPage() {
   const [escalated, setEscalated] = useState<ApprovalRoute[] | null>(null)
   const [escalateError, setEscalateError] = useState<string | null>(null)
   const [isEscalating, setIsEscalating] = useState(false)
+  const [pending, setPending] = useState<PendingApproval[]>([])
 
   useEffect(() => {
     policyApi.versions().then(setPolicy).catch(() => setPolicy(null))
+    approvalApi.pending().then(setPending).catch(() => setPending([]))
   }, [])
 
   const active = policy?.versions.find((v) => v.active)
@@ -36,6 +39,9 @@ export default function ApprovalCenterPage() {
       const result = await fn()
       if (result && typeof result === 'object' && 'roles' in result) {
         setRoute(result as ApprovalRoute)
+      }
+      if (label === 'approve' || label === 'reject') {
+        setPending((current) => current.filter((item) => item.approval_id !== approvalId.trim()))
       }
     } catch (err) {
       setLookupError(err instanceof Error ? err.message : `${label} failed.`)
@@ -72,9 +78,35 @@ export default function ApprovalCenterPage() {
             Approval Lookup
           </div>
           <p className="text-[12.5px] text-[var(--muted-text)] mb-3">
-            There's no pending-approvals list yet — enter an approval ID (e.g.
-            one created during a run) to inspect or act on it directly.
+            Select a pending request below, or enter an approval ID directly.
           </p>
+          {pending.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {pending.map((item) => (
+                <button
+                  key={item.approval_id}
+                  type="button"
+                  onClick={() => {
+                    setApprovalId(item.approval_id)
+                    setLookupError(null)
+                    setRoute(null)
+                  }}
+                  className={`w-full rounded-md border p-3 text-left transition-colors ${
+                    approvalId === item.approval_id
+                      ? 'border-amber-300/50 bg-amber-300/10'
+                      : 'border-white/10 bg-black/20 hover:border-white/25'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-mono text-[11px] text-amber-200">{item.approval_id}</span>
+                    <span className="text-[11px] uppercase text-[var(--muted-text)]">{item.risk_level} risk</span>
+                  </div>
+                  <div className="mt-1 text-[12.5px] text-white">{item.action_type.replaceAll('_', ' ')}</div>
+                  <div className="mt-1 text-[11.5px] leading-[1.5] text-[var(--muted-text)]">{item.request}</div>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2">
             <Input
               value={approvalId}

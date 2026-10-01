@@ -6,10 +6,14 @@ import sqlite3
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
+from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.agent.graph import Retriever, run_agent
+from app.agent.graph import _coerce_amount
+from app.agent.executor import execute_plan
+from app.approvals.routing import route_approval
 from app.core.database import DB_PATH, get_db
 from app.core.constants import AutonomyDecision
 from app.llm.provider import LLMProvider
@@ -115,19 +119,25 @@ async def run_workflow(
     """Run the complete agent graph, persist its recommendation, and gate execution by mode."""
     state = await run_agent(request, llm=llm, retriever=retriever)
     stage_statuses = dict(state.stage_statuses)
-    # Shadow mode intentionally stops here: it never imports or calls a tool handler.
-    if mode == RunMode.AUTONOMOUS and state.autonomy_decision == AutonomyDecision.EXECUTE:
-        from app.tools.registry import execute_action
-        import app.tools  # noqa: F401 — registers tool handlers
-        results = [await execute_action(action) for action in state.proposed_actions]
-        execution_failed = any(not result.success for result in results)
-        stage_statuses["executing_actions"] = "failed" if execution_failed else "complete"
+    if mode == RunMode.SHADOW:
+        stage_statuses["executing_actions"] = "skipped"
         stage_statuses["verifying_outcome"] = "skipped"
         state = state.model_copy(update={
-            "execution_results": results,
             "workflow_mode": mode.value,
             "stage_statuses": stage_statuses,
-            "failed_stage": "executing_actions" if execution_failed else state.failed_stage,
+        })
+    elif mode != RunMode.SHADOW and state.autonomy_decision == AutonomyDecision.APPROVAL_REQUIRED:
+        state = await _create_supervised_approval(state, stage_statuses)
+    elif state.autonomy_decision == AutonomyDecision.EXECUTE:
+        import app.tools  # noqa: F401 — registers tool handlers
+        outcome = await execute_plan(state)
+        state = outcome.state.model_copy(update={
+            "workflow_mode": mode.value,
+            "stage_statuses": {
+                **stage_statuses,
+                "executing_actions": "failed" if outcome.state.error else "complete",
+                "verifying_outcome": "failed" if outcome.state.error else "complete",
+            },
         })
     else:
         stage_statuses["executing_actions"] = "skipped"
@@ -138,6 +148,53 @@ async def run_workflow(
         })
     persist_shadow_run(state, mode, human_decision=human_decision, human_action=human_action)
     return state
+
+
+async def _create_supervised_approval(state: AgentState, stage_statuses: dict[str, str]) -> AgentState:
+    """Persist the first gated action and route it to a human approver."""
+    if not state.proposed_actions:
+        return state.model_copy(update={
+            "workflow_mode": RunMode.SUPERVISED.value,
+            "stage_statuses": {**stage_statuses, "executing_actions": "skipped", "verifying_outcome": "skipped"},
+        })
+    action = state.proposed_actions[0]
+    approval_id = f"APR-{uuid4().hex[:8].upper()}"
+    with get_db() as conn:
+        conn.execute(
+            """INSERT OR REPLACE INTO runs
+               (id, request, evidence, policy_result, autonomy_decision, status)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (state.run_id, state.request, json.dumps([item.model_dump(mode="json") for item in state.evidence]),
+             json.dumps(state.policy_result.model_dump(mode="json") if state.policy_result else {}),
+             state.autonomy_decision.value, "PENDING_APPROVAL"),
+        )
+        conn.execute(
+            """INSERT INTO actions
+               (id, run_id, action_type, arguments, reason, evidence_ids, risk_level,
+                requires_approval, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'PENDING')""",
+            (action.id, state.run_id, action.action_type, json.dumps(action.arguments),
+             action.reason, json.dumps(action.evidence_ids), action.risk_level.value),
+        )
+        conn.execute(
+            "INSERT INTO approvals (id, run_id, action_id, reason, status) VALUES (?, ?, ?, ?, 'PENDING')",
+            (approval_id, state.run_id, action.id, action.reason or "Human approval required"),
+        )
+    policy = state.policy_result
+    await route_approval(
+        approval_id,
+        amount=max(
+            _coerce_amount(action.arguments.get("amount", 0)),
+            _coerce_amount(action.arguments.get("cost", 0)),
+        ),
+        risk_level=policy.risk_level if policy else action.risk_level,
+    )
+    return state.model_copy(update={
+        "workflow_mode": RunMode.SUPERVISED.value,
+        "approval_id": approval_id,
+        "status": "PENDING_APPROVAL",
+        "stage_statuses": {**stage_statuses, "executing_actions": "queued", "verifying_outcome": "queued"},
+    })
 
 
 def build_shadow_report(*, minutes_per_case: float = 15.0) -> ShadowReport:

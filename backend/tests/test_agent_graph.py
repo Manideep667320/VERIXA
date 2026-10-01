@@ -99,3 +99,25 @@ async def test_provider_failure_marks_only_the_stage_that_failed():
     assert state.stage_statuses["executing_actions"] == "queued"
     assert state.policy_result is None
     assert state.error == "provider unavailable"
+
+
+async def test_provider_rate_limit_is_reported_without_upstream_payload():
+    class RateLimitedError(RuntimeError):
+        status_code = 429
+
+    class BrokenLLM(MockLLM):
+        async def structured_output(self, prompt, schema, system=""):
+            raise RateLimitedError("provider shared-pool payload")
+
+    state = await run_agent(
+        "Investigate overheating",
+        llm=BrokenLLM([], {}, {}),
+        retriever=lambda _: [],
+    )
+
+    assert state.failed_stage == "understanding_request"
+    assert state.error == (
+        "The AI provider is temporarily rate-limited. "
+        "Please retry shortly or configure a dedicated provider API key."
+    )
+    assert "shared-pool payload" not in state.error

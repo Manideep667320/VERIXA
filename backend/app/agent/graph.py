@@ -8,7 +8,14 @@ from app.agent.prompts import (SYSTEM_PROMPT, ActionPlanOutput, IntentOutput, Re
 from app.core.constants import AutonomyDecision, RiskLevel, Severity
 from app.feedback.store import record_knowledge_gap
 from app.knowledge.retrieval import retrieve
-from app.llm.provider import LLMProvider, get_llm
+from app.llm.provider import (
+    RATE_LIMIT_MESSAGE,
+    UNAVAILABLE_MESSAGE,
+    LLMProvider,
+    get_llm,
+    is_rate_limit_error,
+    is_unavailable_error,
+)
 from app.models.schemas import ActionContract, AgentState, EvidenceItem, PolicyResult
 from app.policy.engine import decide_autonomy, evaluate_policy
 
@@ -109,9 +116,11 @@ async def policy_check_node(state: AgentState) -> tuple[AgentState, PolicyCheckN
 async def decision_node(state: AgentState, policy_output: PolicyCheckNodeOutput,
                         reasoning: ReasoningOutput) -> tuple[AgentState, DecisionNodeOutput]:
     policy = state.policy_result or PolicyResult(allowed=False, reason="Policy check missing.")
+    cited_ids = set(reasoning.cited_evidence_ids) | {eid for a in state.proposed_actions for eid in a.evidence_ids}
+    eval_evidence = [e for e in state.evidence if e.id in cited_ids] if cited_ids else state.evidence
     decision = decide_autonomy(policy, state.evidence_confidence, has_evidence=bool(state.evidence),
                                conflicting_evidence=reasoning.conflicting_evidence,
-                               evidence=state.evidence,
+                               evidence=eval_evidence,
                                amount=policy_output.amount)
     reason = ("Evidence is missing, conflicting, or below 0.70 confidence." if decision == AutonomyDecision.ESCALATE
               else "Policy requires human approval." if decision == AutonomyDecision.APPROVAL_REQUIRED
@@ -120,6 +129,7 @@ async def decision_node(state: AgentState, policy_output: PolicyCheckNodeOutput,
     return state.model_copy(update={"autonomy_decision": output.decision,
                                     "approval_required": output.decision == AutonomyDecision.APPROVAL_REQUIRED,
                                     "status": output.decision.value,
+                                    "final_response": reason,
                                     "stage_statuses": _complete_stage(state, "evaluating_policy")}), output
 
 async def run_agent(request: str, *, llm: LLMProvider | None = None,
@@ -144,9 +154,14 @@ async def run_agent(request: str, *, llm: LLMProvider | None = None,
     except Exception as exc:
         stage_statuses = dict(state.stage_statuses)
         stage_statuses[active_stage] = "failed"
+        error = (
+            RATE_LIMIT_MESSAGE if is_rate_limit_error(exc)
+            else UNAVAILABLE_MESSAGE if is_unavailable_error(exc)
+            else str(exc)
+        )
         state = state.model_copy(update={"autonomy_decision": AutonomyDecision.ESCALATE,
                                          "status": AutonomyDecision.ESCALATE.value,
-                                         "error": str(exc),
+                                         "error": error,
                                          "failed_stage": active_stage,
                                          "stage_statuses": stage_statuses})
     return state
