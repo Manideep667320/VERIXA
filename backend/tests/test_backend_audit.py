@@ -14,6 +14,9 @@ from app.models.schemas import ActionContract, PolicyResult
 from app.policy.engine import decide_autonomy, evaluate_policy
 
 
+from app.policy.loader import DEFAULT_RULES_PATH, parse_policy_rules
+
+
 @pytest.mark.parametrize(
     ("confidence", "amount", "action_type", "has_evidence", "conflicting", "expected"),
     [
@@ -28,14 +31,16 @@ from app.policy.engine import decide_autonomy, evaluate_policy
     ],
 )
 def test_policy_decision_boundaries(confidence, amount, action_type, has_evidence, conflicting, expected):
+    rules = parse_policy_rules(DEFAULT_RULES_PATH.read_text(encoding="utf-8"))
     action = ActionContract(action_type=action_type)
-    policy = evaluate_policy(action)
+    policy = evaluate_policy(action, rules=rules)
     decision = decide_autonomy(
         policy,
         confidence,
         has_evidence=has_evidence,
         conflicting_evidence=conflicting,
         amount=amount,
+        rules=rules,
     )
     assert decision == expected
 
