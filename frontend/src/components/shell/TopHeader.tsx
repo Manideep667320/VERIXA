@@ -39,15 +39,6 @@ export default function TopHeader({ contextLabel, title }: TopHeaderProps) {
           <Bell size={15} strokeWidth={1.75} />
         </button>
 
-        <div className="hidden md:flex items-center gap-2.5 pl-3 border-l border-white/10">
-          <span className="grid place-items-center w-8 h-8 rounded-full bg-[var(--pill-dark)] border border-white/15 text-[12px] font-semibold text-white shrink-0">
-            OM
-          </span>
-          <div className="leading-tight">
-            <div className="text-[12.5px] font-medium text-white">Operations</div>
-            <div className="text-[11px] text-[var(--muted-text)]">Manager</div>
-          </div>
-        </div>
       </div>
     </header>
   )

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # LLM
     llm_provider: Literal["gemini", "openrouter"] = "gemini"
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-flash-lite-latest"
     openrouter_api_key: str = ""
     openrouter_model: str = "google/gemini-2.0-flash-exp:free"
 

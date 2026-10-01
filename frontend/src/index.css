@@ -80,6 +80,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 body.menu-open {
   overflow: hidden;
 }

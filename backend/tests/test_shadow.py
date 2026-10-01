@@ -1,11 +1,11 @@
 import csv
 import pytest
 
-from app.agent.shadow import import_history_csv
-from app.core.constants import AutonomyDecision
+from app.agent.shadow import _create_supervised_approval, import_history_csv
 from app.core import database
+from app.core.constants import AutonomyDecision, RiskLevel
 from app.llm.provider import LLMProvider
-from app.models.schemas import EvidenceItem
+from app.models.schemas import ActionContract, AgentState, EvidenceItem, PolicyResult
 
 
 class ShadowLLM(LLMProvider):
@@ -50,6 +50,38 @@ async def test_shadow_mode_blocks_ticket_and_technician_writes(tmp_path, monkeyp
         assert conn.execute("SELECT COUNT(*) FROM service_tickets").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM technician_assignments").fetchone()[0] == 0
         assert conn.execute("SELECT COUNT(*) FROM shadow_runs").fetchone()[0] == 1
+
+
+async def test_supervised_approval_accepts_formatted_currency_amount(tmp_path, monkeypatch):
+    db_path = tmp_path / "supervised.db"
+    monkeypatch.setattr(database, "DB_PATH", db_path)
+    database.init_db()
+    import app.agent.shadow as shadow
+    monkeypatch.setattr(shadow, "DB_PATH", db_path)
+    routed = {}
+
+    async def fake_route(approval_id, *, amount, risk_level):
+        routed.update(approval_id=approval_id, amount=amount, risk_level=risk_level)
+
+    monkeypatch.setattr(shadow, "route_approval", fake_route)
+    state = AgentState(
+        request="Replace the failed machine",
+        evidence=[EvidenceItem(id="POL-EQP-002", source="policy.md", text="Replacement policy")],
+        proposed_actions=[ActionContract(
+            action_type="replace_product",
+            arguments={"amount": "$6,000"},
+            reason="Replacement requested",
+            evidence_ids=["POL-EQP-002"],
+            risk_level=RiskLevel.HIGH,
+        )],
+        policy_result=PolicyResult(allowed=True, risk_level=RiskLevel.HIGH),
+        autonomy_decision=AutonomyDecision.APPROVAL_REQUIRED,
+    )
+
+    updated = await _create_supervised_approval(state, dict(state.stage_statuses))
+
+    assert updated.approval_id
+    assert routed["amount"] == 6000
 
 
 async def test_import_ten_row_history_computes_match_rate(tmp_path, monkeypatch):
