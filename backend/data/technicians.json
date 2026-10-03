@@ -1,0 +1,62 @@
+[
+  {
+    "technician_id": "TECH-001",
+    "name": "Sarah Kim",
+    "email": "s.kim@industracool.com",
+    "phone": "+1-555-9001",
+    "region": "Northeast",
+    "certifications": ["PX-100", "PX-150"],
+    "current_tickets": 1,
+    "max_concurrent_critical": 3,
+    "status": "available",
+    "skills": ["Electrical diagnostics", "Sensor calibration", "Control board replacement"]
+  },
+  {
+    "technician_id": "TECH-002",
+    "name": "David Chen",
+    "email": "d.chen@industracool.com",
+    "phone": "+1-555-9002",
+    "region": "West",
+    "certifications": ["PX-100", "PY-200"],
+    "current_tickets": 2,
+    "max_concurrent_critical": 3,
+    "status": "available",
+    "skills": ["Mechanical repair", "Refrigerant systems", "Compressor replacement"]
+  },
+  {
+    "technician_id": "TECH-003",
+    "name": "Mike Rodriguez",
+    "email": "m.rodriguez@industracool.com",
+    "phone": "+1-555-9003",
+    "region": "Midwest",
+    "certifications": ["PX-100", "PX-150", "PY-200"],
+    "current_tickets": 0,
+    "max_concurrent_critical": 3,
+    "status": "available",
+    "skills": ["Full system overhaul", "Coolant systems", "Pump replacement", "Sensor calibration"]
+  },
+  {
+    "technician_id": "TECH-004",
+    "name": "James Park",
+    "email": "j.park@industracool.com",
+    "phone": "+1-555-9004",
+    "region": "Southeast",
+    "certifications": ["PX-100", "PY-200"],
+    "current_tickets": 1,
+    "max_concurrent_critical": 3,
+    "status": "available",
+    "skills": ["Compressor repair", "Emergency response", "Thermal diagnostics"]
+  },
+  {
+    "technician_id": "TECH-005",
+    "name": "Carlos Mendez",
+    "email": "c.mendez@industracool.com",
+    "phone": "+1-555-9005",
+    "region": "Southwest",
+    "certifications": ["PY-200"],
+    "current_tickets": 1,
+    "max_concurrent_critical": 3,
+    "status": "available",
+    "skills": ["HVAC systems", "Zone control", "Firmware updates", "Refrigerant handling"]
+  }
+]

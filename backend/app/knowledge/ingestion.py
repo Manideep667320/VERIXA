@@ -299,7 +299,13 @@ def embed_and_store(
 
 def _resolve_data_dir() -> Path:
     """Return the project-level ``data/`` directory."""
-    return Path(__file__).resolve().parent.parent.parent.parent / "data"
+    root_data = Path(__file__).resolve().parent.parent.parent.parent / "data"
+    if (root_data / "knowledge").exists():
+        return root_data
+    backend_data = Path(__file__).resolve().parent.parent.parent / "data"
+    if (backend_data / "knowledge").exists():
+        return backend_data
+    return root_data
 
 
 def ingest_all(

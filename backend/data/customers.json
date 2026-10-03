@@ -1,0 +1,130 @@
+[
+  {
+    "customer_id": "CUST-001",
+    "name": "Acme Manufacturing Corp",
+    "contact_email": "ops@acmemfg.com",
+    "contact_phone": "+1-555-0101",
+    "address": "1200 Industrial Parkway, Detroit, MI 48201",
+    "service_tier": "Enterprise",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20230845", "installed": "2023-08-15", "warranty_expires": "2025-08-15"}
+    ],
+    "active_tickets": 0,
+    "notes": "High-value customer. 24/7 manufacturing operation."
+  },
+  {
+    "customer_id": "CUST-002",
+    "name": "Quantum Research Labs",
+    "contact_email": "facilities@quantumlabs.com",
+    "contact_phone": "+1-555-0102",
+    "address": "800 Research Blvd, Suite 400, San Jose, CA 95134",
+    "service_tier": "Enterprise",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20230290", "installed": "2023-02-10", "warranty_expires": "2025-02-10"}
+    ],
+    "active_tickets": 0,
+    "notes": "Clean room environment. Requires 48hr advance notice for site access."
+  },
+  {
+    "customer_id": "CUST-003",
+    "name": "TechnoFab Industries",
+    "contact_email": "maintenance@technofab.com",
+    "contact_phone": "+1-555-0103",
+    "address": "3400 Factory Lane, Cleveland, OH 44113",
+    "service_tier": "Premium",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20220312", "installed": "2022-03-12", "warranty_expires": "2024-03-12"}
+    ],
+    "active_tickets": 0,
+    "notes": "Warranty expired. Has declined extended warranty offers."
+  },
+  {
+    "customer_id": "CUST-004",
+    "name": "Precision Dynamics LLC",
+    "contact_email": "plant.ops@precisiondyn.com",
+    "contact_phone": "+1-555-0104",
+    "address": "5600 Foundry Road, Pittsburgh, PA 15201",
+    "service_tier": "Standard",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20210622", "installed": "2021-06-22", "warranty_expires": "2023-06-22"}
+    ],
+    "active_tickets": 0,
+    "notes": "Foundry environment — heavy-duty 24/7 usage. Purchased Gold extended warranty after replacement."
+  },
+  {
+    "customer_id": "CUST-005",
+    "name": "Metro Commercial Properties",
+    "contact_email": "building.mgmt@metroprop.com",
+    "contact_phone": "+1-555-0105",
+    "address": "100 Commerce Tower, New York, NY 10001",
+    "service_tier": "Premium",
+    "equipment": [
+      {"model": "PY-200", "serial": "PY2-20230156", "installed": "2023-01-20", "warranty_expires": "2026-01-20"}
+    ],
+    "active_tickets": 0,
+    "notes": "14-story office building. Multiple tenant zones."
+  },
+  {
+    "customer_id": "CUST-006",
+    "name": "NorthStar Fabrication",
+    "contact_email": "ops@northstarfab.com",
+    "contact_phone": "+1-555-0106",
+    "address": "2200 Industrial Drive, Milwaukee, WI 53201",
+    "service_tier": "Enterprise",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20240115", "installed": "2024-01-15", "warranty_expires": "2026-01-15"}
+    ],
+    "active_tickets": 0,
+    "notes": "New installation. Equipment still under warranty."
+  },
+  {
+    "customer_id": "CUST-007",
+    "name": "GlobalTech Solutions",
+    "contact_email": "support@globaltech.com",
+    "contact_phone": "+1-555-0107",
+    "address": "450 Tech Center Blvd, Austin, TX 78701",
+    "service_tier": "Standard",
+    "equipment": [],
+    "active_tickets": 0,
+    "notes": "No IndustraCool equipment on record. Previous inquiry about 'Product Y' could not be matched."
+  },
+  {
+    "customer_id": "CUST-008",
+    "name": "Sunrise Medical Center",
+    "contact_email": "facilities@sunrisemedical.org",
+    "contact_phone": "+1-555-0108",
+    "address": "7800 Healthcare Drive, Phoenix, AZ 85001",
+    "service_tier": "Enterprise",
+    "equipment": [
+      {"model": "PY-200", "serial": "PY2-20230890", "installed": "2023-08-01", "warranty_expires": "2026-08-01"}
+    ],
+    "active_tickets": 0,
+    "notes": "Medical facility — CRITICAL issues get automatic priority override."
+  },
+  {
+    "customer_id": "CUST-009",
+    "name": "BioProcess Corp",
+    "contact_email": "engineering@bioprocess.com",
+    "contact_phone": "+1-555-0109",
+    "address": "1500 Pharma Way, Research Triangle Park, NC 27709",
+    "service_tier": "Enterprise",
+    "equipment": [
+      {"model": "PX-100", "serial": "PX1-20240330", "installed": "2024-03-30", "warranty_expires": "2026-03-30"}
+    ],
+    "active_tickets": 0,
+    "notes": "Pharmaceutical manufacturing. Temperature-critical processes. GMP compliance required."
+  },
+  {
+    "customer_id": "CUST-010",
+    "name": "Evergreen Commercial Group",
+    "contact_email": "property@evergreenmalls.com",
+    "contact_phone": "+1-555-0110",
+    "address": "9200 Retail Center Parkway, Portland, OR 97201",
+    "service_tier": "Premium",
+    "equipment": [
+      {"model": "PY-200", "serial": "PY2-20240201", "installed": "2024-02-01", "warranty_expires": "2027-02-01"}
+    ],
+    "active_tickets": 0,
+    "notes": "Shopping mall — high foot traffic. Weekend service preferred."
+  }
+]
