@@ -32,6 +32,28 @@ async def lifespan(app: FastAPI):
     from app.tools.registry import list_tools
     logger.info("Registered tools: %s", list_tools())
 
+    # Ensure ChromaDB knowledge base collection exists and is seeded
+    try:
+        import chromadb
+        from app.knowledge.retrieval import _default_persist_dir, _COLLECTION_NAME
+        from app.knowledge.ingestion import ingest_all
+
+        persist_dir = _default_persist_dir()
+        client = chromadb.PersistentClient(path=str(persist_dir))
+        existing_collections = [c.name for c in client.list_collections()]
+        if _COLLECTION_NAME not in existing_collections or client.get_collection(_COLLECTION_NAME).count() == 0:
+            logger.info("ChromaDB collection '%s' missing or empty. Auto-ingesting knowledge base...", _COLLECTION_NAME)
+            ingest_res = ingest_all(persist_dir=persist_dir)
+            logger.info("ChromaDB auto-ingestion complete: %s", ingest_res)
+        else:
+            logger.info(
+                "ChromaDB collection '%s' ready (%d chunks).",
+                _COLLECTION_NAME,
+                client.get_collection(_COLLECTION_NAME).count(),
+            )
+    except Exception as exc:
+        logger.warning("ChromaDB startup check notice: %s", exc)
+
     yield
     logger.info("Shutting down.")
 

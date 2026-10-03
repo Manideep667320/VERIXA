@@ -5,7 +5,7 @@ services:
     rootDir: backend
     plan: free
     region: oregon
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "from app.knowledge.ingestion import ingest_all; ingest_all()"
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:

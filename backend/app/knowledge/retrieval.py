@@ -71,7 +71,16 @@ def _get_collection(
     if persist_dir is None:
         persist_dir = _default_persist_dir()
     client = chromadb.PersistentClient(path=str(persist_dir))
-    return client.get_collection(name=collection_name)
+    try:
+        return client.get_collection(name=collection_name)
+    except Exception:
+        # Collection does not exist yet — auto-ingest or get_or_create
+        try:
+            from app.knowledge.ingestion import ingest_all
+            ingest_all(persist_dir=persist_dir)
+            return client.get_collection(name=collection_name)
+        except Exception:
+            return client.get_or_create_collection(name=collection_name)
 
 
 # ---------------------------------------------------------------------------

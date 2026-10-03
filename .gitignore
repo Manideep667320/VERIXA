@@ -35,6 +35,7 @@ frontend/.vite/
 
 # Data
 data/vectorstore/
+*chroma_db*/
 *.db
 *.db-shm
 *.db-wal
