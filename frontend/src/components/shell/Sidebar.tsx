@@ -11,6 +11,7 @@ import {
 import { NavLink } from 'react-router-dom'
 import { cn } from 'cn'
 import { healthApi } from '@/services/api'
+import VerixaLogo from '../VerixaLogo'
 
 const NAV_ITEMS = [
   { to: '/agent', label: 'Agent', icon: LayoutGrid },
@@ -43,14 +44,9 @@ export default function Sidebar() {
 
   return (
     <aside className="hidden md:flex flex-col shrink-0 w-[236px] h-screen sticky top-0 border-r border-white/10 bg-[#0a0a0a] px-4 py-5">
-      <div className="px-1">
-        <div className="font-sans-ui font-semibold text-[15px] tracking-[-0.01em] text-white leading-tight">
-          Evidence-to-Action
-        </div>
-        <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[var(--muted-text)] font-medium">
-          Enterprise AI Operations
-        </div>
-      </div>
+      <NavLink to="/" className="px-1 group flex items-center" title="Back to Overview">
+        <VerixaLogo size={22} showWordmark={true} />
+      </NavLink>
 
       <div className="mt-8 px-1 text-[10px] uppercase tracking-[0.14em] text-[var(--muted-text)] font-medium">
         Workspace

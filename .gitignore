@@ -35,12 +35,17 @@ frontend/.vite/
 
 # Data
 data/vectorstore/
-*chroma_db*/
+*chroma_db_test*/
 *.db
 *.db-shm
 *.db-wal
 *.sqlite
 *.sqlite3
+
+# Whitelist pre-built knowledge base for production deployment (prevents OOM on Render)
+!backend/data/chroma_db/
+!backend/data/chroma_db/**
+!backend/data/chroma_db/*.sqlite3
 
 # Logs
 *.log

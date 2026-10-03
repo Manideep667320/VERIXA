@@ -14,6 +14,7 @@ from app.audit.logger import get_run_audits
 from app.core import database
 from app.core.constants import AutonomyDecision
 from app.core.database import get_db
+from app.knowledge.embedding import get_embedding_function
 from app.policy.loader import load_active_rules
 
 HELP_COLLECTION = "help"
@@ -138,7 +139,11 @@ def render_help_documents(docs_dir: Path | None = None) -> list[HelpDocument]:
 def _collection(persist_dir: Path | None = None) -> Any:
     path = persist_dir or database.DB_PATH.parent / "chroma_db"
     client = chromadb.PersistentClient(path=str(path))
-    return client.get_or_create_collection(name=HELP_COLLECTION, metadata={"hnsw:space": "cosine"})
+    return client.get_or_create_collection(
+        name=HELP_COLLECTION,
+        embedding_function=get_embedding_function(),
+        metadata={"hnsw:space": "cosine"},
+    )
 
 
 def ingest_help_docs(*, persist_dir: Path | None = None, docs_dir: Path | None = None) -> int:

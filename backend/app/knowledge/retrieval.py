@@ -14,6 +14,7 @@ import chromadb
 
 from app.core.constants import DocumentType
 from app.knowledge.conflicts import scan_knowledge_conflicts
+from app.knowledge.embedding import get_embedding_function
 from app.models.schemas import EvidenceItem
 
 # ---------------------------------------------------------------------------
@@ -71,16 +72,21 @@ def _get_collection(
     if persist_dir is None:
         persist_dir = _default_persist_dir()
     client = chromadb.PersistentClient(path=str(persist_dir))
+    emb_fn = get_embedding_function()
     try:
-        return client.get_collection(name=collection_name)
+        return client.get_collection(name=collection_name, embedding_function=emb_fn)
     except Exception:
         # Collection does not exist yet — auto-ingest or get_or_create
         try:
             from app.knowledge.ingestion import ingest_all
             ingest_all(persist_dir=persist_dir)
-            return client.get_collection(name=collection_name)
+            return client.get_collection(name=collection_name, embedding_function=emb_fn)
         except Exception:
-            return client.get_or_create_collection(name=collection_name)
+            return client.get_or_create_collection(
+                name=collection_name,
+                embedding_function=emb_fn,
+                metadata={"hnsw:space": "cosine"},
+            )
 
 
 # ---------------------------------------------------------------------------

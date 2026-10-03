@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import VerixaLogo from './VerixaLogo'
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home' },
@@ -81,20 +82,14 @@ export default function Navbar() {
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-40 flex items-center justify-between md:justify-center w-full gap-[clamp(18px,2.8vw,28px)] px-[clamp(14px,3vw,32px)] py-[clamp(16px,2.4vh,28px)] anim-slide-down">
-        {/* Logo */}
+        {/* VERIXA Logo */}
         <a
           href="#home"
-          aria-label="Home"
+          aria-label="VERIXA Home"
           onClick={() => handleSelectNav('home')}
-          className="shrink-0 w-[48px] h-[48px] md:w-[clamp(40px,4.4vw,46px)] md:h-[clamp(40px,4.4vw,46px)] rounded-full [box-shadow:var(--nav-shadow)] grid place-items-center overflow-hidden border-[1.5px] border-white transition-transform duration-[280ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.04]"
+          className="group shrink-0 flex items-center transition-transform duration-200 hover:scale-[1.03]"
         >
-          <img
-            src="/assets/logo.webp"
-            alt="Evidence-to-Action"
-            width={92}
-            height={92}
-            className="w-full h-full object-cover"
-          />
+          <VerixaLogo size={26} showWordmark={true} />
         </a>
 
         {/* Desktop Nav Pill */}

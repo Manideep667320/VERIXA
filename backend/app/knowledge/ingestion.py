@@ -14,6 +14,8 @@ from pathlib import Path
 
 import chromadb
 
+from app.knowledge.embedding import get_embedding_function
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -258,8 +260,10 @@ def embed_and_store(
         client.delete_collection(collection_name)
     except Exception:
         pass
+    emb_fn = get_embedding_function()
     collection = client.get_or_create_collection(
         name=collection_name,
+        embedding_function=emb_fn,
         metadata={"hnsw:space": "cosine"},
     )
 

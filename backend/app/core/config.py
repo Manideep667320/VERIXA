@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     openrouter_model: str = "google/gemini-2.0-flash-exp:free"
 
     # Embedding
-    embedding_model: str = "models/text-embedding-004"
+    embedding_model: str = "models/gemini-embedding-001"
 
     # Database
     database_url: str = "sqlite:///./data/evidence_to_action.db"

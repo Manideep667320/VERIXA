@@ -5,12 +5,16 @@ services:
     rootDir: backend
     plan: free
     region: oregon
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -c "from app.knowledge.ingestion import ingest_all; ingest_all()"
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
+      - key: OMP_NUM_THREADS
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
       - key: LLM_PROVIDER
         value: gemini
       - key: GEMINI_API_KEY
